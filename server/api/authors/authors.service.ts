@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Author } from '../../database/entities/author.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,29 +10,37 @@ export class AuthorsService {
     private readonly authorRepository: Repository<Author>,
   ) {}
 
-  async findAll(): Promise<Author[]> {
+  async findAll(): Promise<object> {
     return this.authorRepository.find();
   }
 
   async findById(id): Promise<object> {
-    return await this.authorRepository.findOne(id) || { status: 204, message: 'Author with this id doesn\'t exists' };
+    if (await this.authorRepository.findOne(id)) {
+      return this.authorRepository.findOne(id)
+    }
+    throw new HttpException('Author with this id doesn\'t exists', HttpStatus.NO_CONTENT);
   }
 
   async findByName(firstName, lastName): Promise<object> {
-    return await this.authorRepository.findOne({ firstName: firstName, lastName: lastName }) ||
-      { status: 204, message: 'Author with this first and last name doesn\'t exists' };
+    if (await this.authorRepository.findOne({ firstName, lastName })) {
+      return this.authorRepository.findOne({ firstName, lastName })
+    }
+      throw new HttpException('Author with this first and last name doesn\'t exists', HttpStatus.NO_CONTENT);
   }
 
   async create(author: Author): Promise<object> {
-    return await this.authorRepository.save(author);
+    if (author.firstName && author.lastName) {
+      return this.authorRepository.save(author);
+    }
+    throw new HttpException('Please, provide both, author\'s first and last name', HttpStatus.BAD_REQUEST);
   }
 
-  async update(author: Author): Promise<object> {
-    if (await this.authorRepository.findOne(author.id)) {
-      await this.authorRepository.update(author.id, author);
-      return { status: 200, authorId: author.id, description: 'Updated' };
+  async update(id, author: Author): Promise<object> {
+    if (await this.authorRepository.findOne(id)) {
+      await this.authorRepository.update(id, JSON.parse(JSON.stringify(author)));
+      return { status: 200, authorId: id, description: 'Updated' };
     }
-    return { status: 204, description: 'Author with this id doesn\'t exists' };
+    throw new HttpException('Author with this id doesn\'t exists', HttpStatus.NO_CONTENT);
   }
 
   async delete(id): Promise<object> {
@@ -40,6 +48,24 @@ export class AuthorsService {
       await this.authorRepository.delete(id);
       return { status: 200, authorId: id, description: 'Deleted' };
     }
-    return { status: 204, description: 'Author with this id doesn\'t exists' };
+    throw new HttpException('Author with this id doesn\'t exists', HttpStatus.NO_CONTENT);
+  }
+
+  async getOrCreateAuthor(book) {
+    const authorName = await JSON.stringify(book.author).replace(/['"]+/g, '');
+    const separatedName = await authorName.trim().split(' ');
+    const existingAuthor =
+      await this.authorRepository.findOne({ firstName: separatedName[0], lastName: separatedName[1] }) ||
+      await this.authorRepository.findOne({ firstName: separatedName[1], lastName: separatedName[0] });
+    if (existingAuthor) {
+      book.author = existingAuthor;
+    } else {
+      let newAuthor = { firstName: separatedName[0], lastName: separatedName[1] };
+      await this.authorRepository.save(newAuthor).then((author) => {
+        newAuthor = author
+      });
+      book.author = newAuthor;
+    }
+    return book;
   }
 }

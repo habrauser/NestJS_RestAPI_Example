@@ -1,13 +1,15 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { apiToken } from './middleware/apiToken.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
 import Author from './database/entities/author.entity';
 import Book from './database/entities/book.entity';
 import { AuthorsModule } from './api/authors/authors.module';
 import { BooksModule } from './api/books/books.module';
-import { apiToken } from './middleware/apiToken.middleware';
 import { AuthorsController } from './api/authors/authors.controller';
 import { BooksController } from './api/books/books.controller';
 

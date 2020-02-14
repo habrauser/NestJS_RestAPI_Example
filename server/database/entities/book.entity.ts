@@ -6,38 +6,51 @@ import {
   ObjectIdColumn,
   ManyToOne,
   CreateDateColumn,
-  UpdateDateColumn,
+  UpdateDateColumn, BeforeUpdate,
 } from 'typeorm';
 import { IsNotEmpty, IsDateString } from 'class-validator';
+import { Expose } from 'class-transformer';
 import Author from './author.entity';
 
 @Entity()
 export class Book extends BaseEntity {
 
+  @Expose()
   @ObjectIdColumn()
-  id: ObjectID;
+  _id: ObjectID;
 
+  @Expose()
   @Column()
   @IsNotEmpty()
   title: string;
 
+  @Expose()
   @Column()
   @IsNotEmpty()
   author: object;
 
+  @Expose()
   @Column({ unique: true })
   @IsNotEmpty()
-  @IsDateString()
   iban: number;
 
-  @Column()
-  published_at: Date;
+  @Expose()
+  @IsDateString()
+  publishedAt: Date;
 
+  @Expose()
   @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  createdAt: Date;
 
+  @Expose()
   @UpdateDateColumn({ type: 'timestamp', nullable: true  })
-  updated_at: Date;
+  updatedAt: Date;
+
+  // Not working
+  @BeforeUpdate()
+  updateTimestamp() {
+    this.updatedAt = new Date();
+  }
 
   @ManyToOne(type => Author, author => author.books)
   owner: Author;
